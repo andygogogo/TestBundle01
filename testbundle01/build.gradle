@@ -1,0 +1,219 @@
+buildscript {
+    repositories {
+//        maven {
+//            url 'http://192.68.70.89:8081/nexus/content/groups/public'
+//        }
+//        maven {
+//            url 'http://158.1.0.149:50080/repository/maven-public/'
+//        }
+        mavenLocal()
+        maven {url SDK_REPOSITORY_URL
+            credentials {
+                username = SDK_REPOSITORY_USERNAME
+                password = SDK_REPOSITORY_PASSWORD
+            }
+        }
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+        maven { url "http://maven.aliyun.com/nexus/content/groups/public/"}
+        // 公有云推送SDK集成
+        maven {
+            url 'http://maven.aliyun.com/nexus/content/repositories/releases/'
+        }
+        jcenter()
+    }
+    configurations.all {
+        resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    }
+    dependencies {
+        classpath "com.taobao.android:atlasplugin:2.3.3.rc63-SNAPSHOT"
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.4.1'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.6'
+    }
+}
+
+allprojects {
+    repositories {
+//        maven {
+//            url 'http://192.68.70.89:8081/nexus/content/groups/public'
+//        }
+//        maven {
+//            url 'http://158.1.0.149:50080/repository/maven-public/'
+//        }
+        mavenLocal()
+        maven {url SDK_REPOSITORY_URL
+            credentials {
+                username = SDK_REPOSITORY_USERNAME
+                password = SDK_REPOSITORY_PASSWORD
+            }
+        }
+        maven { url "http://maven.aliyun.com/nexus/content/groups/public/"}
+        maven { url "http://maven.aliyun.com/nexus/content/repositories/google/"}
+        maven {url "http://" + CUSTOM_REPOSITORY_HOST + "/repository/maven-public/"}
+        //maven {url "http://mvnrepo.alibaba-inc.com/mvn/repository"}
+        jcenter()
+    }
+}
+
+
+
+apply plugin: 'com.android.library'
+apply plugin: 'com.taobao.atlas'
+apply plugin: 'maven-publish'
+
+def mvn_username = getEnvValue('NEXUS_USER_NAME', "")
+def mvn_password = getEnvValue('NEXUS_USER_PASSWORD', "")
+def emas_version_name = getEnvValue('EMAS_VERSION_NAME', "1.0.0-SNAPSHOT")
+if (mvn_username) {
+    println("mvn_username=" + mvn_username)
+
+}
+if (mvn_password) {
+    println("mvn_password=" + mvn_password)
+}
+
+String getEnvValue(key, defValue) {
+    def val = System.getProperty(key);
+    if (null != val) {
+        return val;
+    }
+    val = System.getenv(key);
+    if (null != val) {
+        return val;
+    }
+    return defValue;
+}
+
+group = MAVEN_GROUP
+version = emas_version_name
+
+tasks.withType(JavaCompile) {
+    sourceCompatibility = 1.7
+    targetCompatibility = 1.7
+}
+
+android {
+    compileSdkVersion 26
+    buildToolsVersion "26.0.2"
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
+    }
+
+    defaultConfig {
+        versionName version
+//        multiDexEnabled true
+        ndk {
+            abiFilters "x86"
+            abiFilters "armeabi"
+        }
+    }
+}
+
+atlas.bundleConfig.awbBundle = true
+
+task sourcesJar(type: Jar) {
+    from('src/main/java') {
+        include '**'
+    }
+    classifier = 'sources'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            if (project.gradle.startParameter.toString().contains("assembleDebug")) {
+                artifact "${project.buildDir}/outputs/awb/${project.name}-debug.awb"
+                artifactId MAVEN_ARTIFACTID
+            } else {
+                artifact "${project.buildDir}/outputs/awb/${project.name}-release.awb"
+                artifactId MAVEN_ARTIFACTID
+            }
+            artifact sourcesJar
+        }
+    }
+    repositories {
+        if (version.endsWith("-SNAPSHOT")) {
+            maven {
+                url "http://" + CUSTOM_REPOSITORY_HOST + "/repository/maven-snapshots/"
+                credentials {
+                    username = CUSTOM_REPOSITORY_USERNAME
+                    password = CUSTOM_REPOSITORY_PASSWORD
+                }
+            }
+        } else {
+            maven {
+                url "http://" + CUSTOM_REPOSITORY_HOST + "/repository/maven-releases"
+                credentials {
+                    username = CUSTOM_REPOSITORY_USERNAME
+                    password = CUSTOM_REPOSITORY_PASSWORD
+                }
+            }
+        }
+    }
+}
+
+
+
+configurations {
+    providedCompile
+    all*.exclude group: 'com.android.support', module: 'multidex'
+    all*.exclude group: 'com.taobao.android', module: 'tnet-jni'
+    all*.exclude group: 'com.taobao.android', module: 'tlog_adapter'
+}
+
+
+dependencies {
+    /************基础库 START**********/
+    compile('com.alibaba:fastjson:1.1.54.android@jar') { transitive true }
+    compile('com.taobao.android:mtopsdk_allinone:3.0.4.7-open@jar') { transitive true }
+    compile('com.taobao.android:networksdk:3.3.5-open@jar') { transitive true }
+//    compile('com.taobao.android:tnet4android:3.1.14.6@aar') { transitive true }
+    compile('com.taobao.android:utdid4all:1.1.5.3_proguard@jar') { transitive true }
+    /************基础库 END**********/
+
+    /************UPDATE START**********/
+//    compile('com.taobao.android:atlas_core:5.0.8.0@aar') { transitive true }
+//    compile('com.taobao.android:open-update-aar:1.0.1-open@aar') {
+//        transitive true
+//    }
+    compile('com.taobao.android:downloader:2.0.2.12@jar') { transitive true }
+//    /************UPDATE END**********/
+//
+//    /************高可用 SDK START**********/
+//    compile('com.taobao.android:accs_sdk_taobao:3.3.3.1-open') { transitive true }
+//    compile('com.taobao.android:ut-analytics:1.1.0.1-open@aar') { transitive true }
+//    compile('com.alibaba.ha:alihatbadapter:1.1.0.2-open@aar') {
+//        transitive true
+//    }
+//    //默认oss通道需要依赖oss的三方库
+    compile 'com.squareup.okhttp3:okhttp:3.4.1@jar'
+    compile 'com.squareup.okio:okio:1.9.0@jar'
+//    compile 'com.aliyun.dpa:oss-android-sdk:2.4.2@aar'
+//    /************高可用 SDK END**********/
+//
+//    /************WEEX SDK START**********/
+//    compile("com.taobao.android:weex_sdk:0.17.9-new-measurement-1") { transitive true }
+//    compile('com.taobao.android:zcache:0.1.1-proguard') { transitive true }
+//    compile('com.alibaba.mtl:dynamicConfig:0.1.0.10') { transitive true }
+//    compile('com.alibaba.mtl:dynamicconfigadapter:0.1.0.10') { transitive true }
+//    compile('com.android.support:recyclerview-v7:26.+') { transitive true }
+    compile 'com.android.support:appcompat-v7:26.+'
+//    /************WEEX SDK END**********/
+//
+//    compile 'com.android.support.constraint:constraint-layout:1.0.2'
+//
+//    compile 'com.android.support:design:26.1.0'
+//    compile 'com.android.support:support-v4:26.0.0-beta1'
+//    compile 'com.facebook.fresco:fresco:0.12.0+'
+//    compile 'com.facebook.fresco:animated-gif:0.12.0'
+//    //zxing相关
+//    compile 'com.journeyapps:zxing-android-embedded:3.2.0@aar'
+//    compile 'com.google.zxing:core:3.2.1'
+}
