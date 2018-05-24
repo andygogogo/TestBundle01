@@ -72,7 +72,7 @@ public class DsLoginActivity extends AppCompatActivity implements View.OnClickLi
 //        String current = df.format(Calendar.getInstance().getTime());
 //        Toast.makeText(this, "测试热修复" + current, Toast.LENGTH_SHORT).show();
         uname.setVisibility(View.VISIBLE);
-        uname.setText("Mr呆萌14：04");
+        uname.setText("Mr呆萌动态部署14：20");
     }
 
     public void findMyView() {
